@@ -1,0 +1,3 @@
+{{define "content"}}
+	{{.content}}
+{{end}}
