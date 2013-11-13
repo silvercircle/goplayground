@@ -4,7 +4,7 @@
 <head>
 	<link rel="stylesheet" type="text/css" href="/static/styles/base.css?v=1599" />
 	<link rel="stylesheet" type="text/css" href="/static/styles/skin_default.css?v=1599" />
-	<title>Test document</title>
+	<title>{{.L.app_title}}</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 <body>

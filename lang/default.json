@@ -1,4 +1,5 @@
 {
+	"app_title" : "Go test application",
 	"default" : "Default message",
 	"foo" : "Bar",
 	"dberror_title" : "Database Error!"

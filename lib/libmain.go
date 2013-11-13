@@ -1,9 +1,9 @@
 package lib
 
 type User struct {
-    ID  	int
-    NAME 	string
-    EMAIL	string
+    ID    int
+    NAME  string
+    EMAIL string
 }
 
 type Article struct {
@@ -16,7 +16,7 @@ func (d *Data) DoServe() {
         result := map[string]interface{}{}
 
         rows, err := d.TheDB.NamedQueryMap("SELECT id, name, email FROM user WHERE id = :id",
-            map[string]interface{}{"id":  1})
+            map[string]interface{}{"id": 1})
         if err != nil {
             d.DBError(err)
         } else {
@@ -42,5 +42,5 @@ func (d *Data) DoServe() {
 // main dispatcher function. Looks at the route and calls the appropriate
 // action.
 func (d *Data) Dispatch() {
-	d.DoServe()
+    d.DoServe()
 }
