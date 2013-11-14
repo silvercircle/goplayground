@@ -1,0 +1,16 @@
+; sample appconfig.ini
+; must be located in the applications root folder
+; there are defaults for anything hardcoded into the application
+[Database]
+DBMethod = unix
+DBUser = user
+DBpass = veryverysecret
+
+[Templates]
+Preload = true
+
+[Server]
+urlprefix = /app/
+
+[Defaults]
+Language = DE_de

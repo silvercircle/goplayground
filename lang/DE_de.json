@@ -1,4 +1,5 @@
 {
+	"app_title" : "Anwendungstitel",
 	"default" : "Standardnachricht",
 	"foo" : "Bar auf deutsch :)"
 }

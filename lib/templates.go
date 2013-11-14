@@ -1,3 +1,4 @@
+// template system
 package lib
 
 import (
@@ -6,7 +7,6 @@ import (
     "io"
     "io/ioutil"
     "os"
-    "path/filepath"
     "time"
 )
 
@@ -23,6 +23,7 @@ type TemplateNode struct {
 // all templates are kept in a map. The key is the name of the template (e.g. header or sidebar/content)
 // which also defines its location in the template folder structure.
 var Templates map[string]*TemplateNode
+var T *template.Template = nil
 
 func RenderTemplate(wr io.Writer, name string, data interface{}) error {
     LoadTemplate(name)
@@ -80,31 +81,46 @@ func LoadTemplate(name string) (*template.Template, error) {
     return t.T, nil
 }
 
+var templates_to_load []string
+
 // recursively scan the templates directory and preload all templates found
 // called by main on startup once.
-func PreloadTemplates(prefix string) {
+func DoPreloadTemplates(prefix string) {
     var files []os.FileInfo
-
-    if !SysConf.Settings.Templates.Preload {
-        return
-    }
+	
     curdir := SysConf.Homepath + "/templates/" + prefix
-
     files, _ = ioutil.ReadDir(curdir)
-
+	
+	ft, _ := os.Lstat(curdir)
+	if ft.ModTime().Unix() > SysConf.TemplateMostRecent {
+		SysConf.TemplateMostRecent = ft.ModTime().Unix()
+	}
+    var finalPrefix string
+	if prefix == "" {
+        	finalPrefix = ""
+    } else {
+    	finalPrefix = prefix + "/"
+    }
     for _, file := range files {
         if file.IsDir() {
-            PreloadTemplates(file.Name())
+            DoPreloadTemplates(finalPrefix + file.Name())
         } else {
-            var finalPrefix string
-            if prefix == "" {
-                finalPrefix = ""
-            } else {
-                finalPrefix = prefix + "/"
-            }
-            ext := filepath.Ext(file.Name())
-            basename := file.Name()[0 : len(file.Name())-len(ext)]
-            LoadTemplate(finalPrefix + basename)
+            //ext := filepath.Ext(file.Name())
+            //basename := file.Name()[0 : len(file.Name())-len(ext)]
+            //LoadTemplate(finalPrefix + basename)
+            templates_to_load = append(templates_to_load, SysConf.Homepath + "/templates/" + finalPrefix + file.Name())
         }
     }
 }
+
+func PreloadTemplates(prefix string, force bool) {
+	if len(templates_to_load) > 0 {
+		templates_to_load = nil
+	}
+	DoPreloadTemplates(prefix)
+	fmt.Println("Rescanning templates...")
+	if T != nil {
+		T = nil
+	} 
+    T = template.Must(template.ParseFiles(templates_to_load...))
+}	

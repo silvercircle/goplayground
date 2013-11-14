@@ -1,8 +1,10 @@
+// implement app settings
 package lib
 
 import (
     "code.google.com/p/gcfg"
     "os"
+    "time"
 )
 
 type Settings struct {
@@ -23,7 +25,10 @@ type Settings struct {
         DBSocketname string
     }
     Templates struct {
-        Preload bool
+        Rescan 		 time.Duration
+    }
+    Defaults struct {
+    	Language	 string
     }
 }
 
@@ -36,13 +41,16 @@ func (s *Settings) Init() {
     s.Database.DBMethod = "unix"
     s.Database.DBSocketname = "/var/run/mysqld/mysqld.sock"
 
-    s.Templates.Preload = false
+    s.Templates.Rescan = 60				// check every 60 *seconds* for changed templates
+    									// can be customized via appconfig.ini for a more convenient value on a dev system
 
     s.Server.FCGI = true
     s.Server.FCGISock = SysConf.Homepath + "/app.sock"
     s.Server.HttpPort = "8080"
     s.Server.HttpHost = ""
     s.Server.URLPrefix = ""
+
+	s.Defaults.Language = "default"
 
     if _, err := os.Lstat(SysConf.Homepath + "/appconfig.ini"); err == nil {
         gcfg.ReadFileInto(s, SysConf.Homepath+"/appconfig.ini")

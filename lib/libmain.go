@@ -28,11 +28,11 @@ func (d *Data) DoServe() {
             }
             result["user"] = user
             rows.Close()
-            cnt, _ := LoadTemplate("test/test")
-            d.Templates = append(d.Templates, cnt)
+            //cnt, _ := LoadTemplate("test/test")
+            d.Templates = append(d.Templates, "test/test")
         }
-        cnt, _ := LoadTemplate("content")
-        d.Templates = append(d.Templates, cnt)
+        //cnt, _ := LoadTemplate("content")
+        d.Templates = append(d.Templates, "content")
         d.Context["D"] = result
         d.Context["content"] = "The content"
     }

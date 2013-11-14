@@ -7,7 +7,6 @@ import (
     "path/filepath"
     "strings"
     "testgo/lib"
-    "fmt"
 )
 
 var Languages = map[string]map[string]string{}
@@ -24,8 +23,10 @@ func Init() {
         if !file.IsDir() && strings.ToLower(filepath.Ext(file.Name())) == ".json" {
             id := file.Name()[0 : len(file.Name())-len(filepath.Ext(file.Name()))]
             if strings.ToLower(id) == "default" {
-            	continue
+            	continue							// already done
             }
+            // create a copy of the map that holds the default language strings and override them
+            // with translations. This ensures there won't be empty strings, just possibly untranslated ones
             Languages[id] = make(map[string]string)
             for k, v := range Languages["default"] {
             	Languages[id][k] = v
@@ -35,6 +36,9 @@ func Init() {
     }
 }
 
+// read a language file into target
+// id is the identifier and, at the same time, the base name of the file holding
+// the translation without the .json extension.
 func ReadLangFile(id string, target map[string]string) {
     file, err := ioutil.ReadFile(lib.SysConf.Homepath + "/lang/" + id + ".json")
     if err == nil {
@@ -46,6 +50,5 @@ func ReadLangFile(id string, target map[string]string) {
             json.Unmarshal(objmap[k], &s)
             target[k] = s
         }
-        fmt.Println("ID == ", target)
     }
 }

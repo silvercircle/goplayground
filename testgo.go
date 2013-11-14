@@ -26,6 +26,8 @@ func (s FCGISrv) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
     HandleRequest(resp, req)
 }
 
+var mustRescanTemplates = false
+
 /*
  * the main function that handle each request. It does:
  * o) set up the lib.Data that holds all per-request specific data
@@ -37,13 +39,17 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
     var rdat lib.Data
     var dberr error
 
+	if mustRescanTemplates {
+		lib.PreloadTemplates("", true)
+		mustRescanTemplates = false
+	}
     rdat.BeginRequest = time.Now()
     req.ParseForm()
     rdat.TheDB, dberr = db.Connect()
     rdat.Context = map[string]interface{}{}
     rdat.Out = resp
     rdat.Req = req
-    rdat.Lang = lang.Languages["default"]
+    rdat.Lang = lang.Languages[lib.SysConf.Settings.Defaults.Language]
     rdat.Context["L"] = rdat.Lang
 
     if req.FormValue("xml") != "" {
@@ -60,18 +66,19 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
         rdat.CurrentRoute = "index"
     }
 
-    session, _ := store.Get(req, "appsession")
+    rdat.Session, _ = store.Get(req, "appsession")
 
+    // we were not able to connect to our database, inform the user and bail out early
     if dberr != nil || rdat.TheDB == nil {
-        t, _ := lib.LoadTemplate("errors/dberror")
-        rdat.Templates = append(rdat.Templates, t)
+        //t, _ := lib.LoadTemplate("errors/dberror")
+        rdat.Templates = append(rdat.Templates, "errors/dberror")
         rdat.Context["dberror"] = dberr.Error()
     } else {
         defer rdat.TheDB.Close()
         rdat.Dispatch()
     }
     // must be done before content is sent
-    session.Save(req, resp)
+    rdat.Session.Save(req, resp)
     // output any optional http headers
     if rdat.ResponseTypeXML {
         resp.Header().Add("Content-Type", "text/xml; charset=UTF-8")
@@ -90,25 +97,27 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
     // by the handler, do this now and output the header template. Unless it's XML,
     // then just output the XML header.
     if !rdat.ResponseTypeXML && !rdat.ResponseTypeJSON {
-        if rdat.HeaderTemplate == nil {
-            rdat.HeaderTemplate, _ = lib.LoadTemplate("header")
+        if rdat.HeaderTemplate == "" {
+            //rdat.HeaderTemplate, _ = lib.LoadTemplate("header")
+            rdat.HeaderTemplate = "header"
         }
-        if rdat.FooterTemplate == nil {
-            rdat.FooterTemplate, _ = lib.LoadTemplate("footer")
+        if rdat.FooterTemplate == "" {
+            //rdat.FooterTemplate, _ = lib.LoadTemplate("footer")
+            rdat.FooterTemplate = "footer"
         }
-        rdat.HeaderTemplate.Execute(resp, rdat.Context)
+        lib.T.ExecuteTemplate(resp, rdat.HeaderTemplate, rdat.Context)
     } else if rdat.ResponseTypeXML {
         resp.Write([]byte(`<?xml version="1.0" encoding="UTF-8" ?>`))
     }
     // output all templates that were registered by the handler(s) (if any)
     for _, t := range rdat.Templates {
-        t.Execute(resp, rdat.Context)
+        lib.T.ExecuteTemplate(resp, t, rdat.Context)
     }
     // and finally the footer (but again, not for xml
     rdat.EndRequest = time.Now()
     rdat.Context["loadtime"] = rdat.EndRequest.Sub(rdat.BeginRequest)
     if !rdat.ResponseTypeXML && !rdat.ResponseTypeJSON {
-        rdat.FooterTemplate.Execute(resp, rdat.Context)
+        lib.T.ExecuteTemplate(resp, rdat.FooterTemplate, rdat.Context)
     }
 }
 
@@ -146,7 +155,7 @@ func main() {
         fmt.Println("Stale socket found, removing")
         os.Remove(lib.SysConf.Settings.Server.FCGISock)
     }
-    lib.PreloadTemplates("")
+    lib.PreloadTemplates("", true)
 
     if lib.SysConf.Settings.Server.FCGI {
         listener, _ = net.Listen("unix", lib.SysConf.Settings.Server.FCGISock)
@@ -167,6 +176,20 @@ func main() {
             }
             os.Exit(1)
         }
+    }()
+    go func () {
+    	var currentMostRecent int64
+    	for {
+    		time.Sleep(lib.SysConf.Settings.Templates.Rescan * 1000 * time.Millisecond)
+    		if !mustRescanTemplates {
+    			currentMostRecent = lib.SysConf.TemplateMostRecent
+				lib.DoPreloadTemplates("")
+				if lib.SysConf.TemplateMostRecent > currentMostRecent {
+					fmt.Println("Templates changed, must rescan")
+					mustRescanTemplates = true
+				}
+			}    		
+    	}
     }()
     if lib.SysConf.Settings.Server.FCGI {
         fcgi.Serve(listener, srv)
