@@ -20,9 +20,20 @@ var SysConf struct {
 // per request private data
 type Data struct {
 	TheDB            *sqlx.DB               // db connection
+	// The output context is organized as some kind of namespace. The root node may
+	// hold any type of data - strings, arrays, structs, arrays of structs, maps
+	// anything that is required.
+	// sub-namespaces exist. Context["L"] holds the current language definition 
+	// (a map of strings). Context["C"] is another map of strings, mainly for generic
+	// data. Context["S"] holds the current session and Context["U"] the logged-in
+	// user (if any, otherwise its a default struct for a guest user)
 	Context          map[string]interface{} // request context
+	// string context is a shortcut and is mapped to Context["C"]
+	StringContext	 map[string]string
 	Out              io.Writer              // response must go there...
 	Req              *http.Request          // the request
+	// Lang is one of Languages[] a map of strings. For template output
+	// it is mapped to Context["L"]
 	Lang             map[string]string      // points to the language table
 	Templates        []string               // templates loaded during request processing (HandleRequest() must output them)
 	HeaderTemplate   string                 // allows for custom header and footer template(s) for this particular request
@@ -34,4 +45,5 @@ type Data struct {
 	BeginRequest     time.Time              // for timing the request
 	EndRequest       time.Time
 	Session          *sessions.Session // session object
+	BaseURL			 string
 }

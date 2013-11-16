@@ -5,6 +5,7 @@ import (
 	"code.google.com/p/gcfg"
 	"os"
 	"time"
+	"log"
 )
 
 type Settings struct {
@@ -25,9 +26,9 @@ type Settings struct {
 		DBSocketname string
 	}
 	Templates struct {
-		Rescan time.Duration
+		MTimeCheckInterval time.Duration
 	}
-	Defaults struct {
+	Settings struct {
 		Language string
 	}
 }
@@ -43,7 +44,7 @@ func (s *Settings) Init() {
 
 	// check every 60 *seconds* for changed templates
 	// can be customized via appconfig.ini for a more convenient value on a dev system
-	s.Templates.Rescan = 60 
+	s.Templates.MTimeCheckInterval = 60 
 
 	s.Server.FCGI = true
 	s.Server.FCGISock = SysConf.Homepath + "/app.sock"
@@ -51,9 +52,16 @@ func (s *Settings) Init() {
 	s.Server.HttpHost = ""
 	s.Server.URLPrefix = ""
 
-	s.Defaults.Language = "default"
+	s.Settings.Language = "default"
 
 	if _, err := os.Lstat(SysConf.Homepath + "/appconfig.ini"); err == nil {
-		gcfg.ReadFileInto(s, SysConf.Homepath+"/appconfig.ini")
+		err = gcfg.ReadFileInto(s, SysConf.Homepath+"/appconfig.ini")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	
+	if s.Server.URLPrefix == "" {
+		s.Server.URLPrefix = "/"
 	}
 }

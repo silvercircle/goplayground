@@ -1,5 +1,4 @@
-{{define "header"}}
-<!doctype html>
+{{define "header"}}<!doctype html>
 <html>
 <head>
 	<link rel="stylesheet" type="text/css" href="/static/styles/base.css?v=1599" />

@@ -12,8 +12,8 @@ func (d *Data) DoServe() {
 		index := 0
 		result := map[string]interface{}{}
 
-		rows, err := d.TheDB.NamedQueryMap("SELECT id, name, email FROM user WHERE id = :id",
-			map[string]interface{}{"id": 1})
+		rows, err := d.TheDB.NamedQueryMap("SELECT id, name, email FROM user WHERE id < :id",
+			map[string]interface{}{"id": 3})
 		if err != nil {
 			d.DBError(err)
 		} else {
@@ -34,6 +34,8 @@ func (d *Data) DoServe() {
 		d.Context["content"] = "The content"
 	}
 	d.Context["httpheaders"] = map[string]string{"X-Served-By": "Golang"}
+	d.StringContext["testurl"] = d.BaseURL + "index?test=foo"
+	d.StringContext["testlink"] = "<a href=\"" + d.StringContext["testurl"] + "\">" + d.Lang["foo"] + "</a>"
 }
 
 // main dispatcher function. Looks at the route and calls the appropriate

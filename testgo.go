@@ -16,9 +16,11 @@ import (
 	"testgo/lib/db"
 	"testgo/lib/lang"
 	"time"
+	"sync"
 )
 
 var store = sessions.NewCookieStore([]byte("adadfasdfadafsd"))
+var rescanLock sync.RWMutex
 
 type FCGISrv struct{}
 
@@ -40,18 +42,24 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
 	var dberr error
 
 	if mustRescanTemplates {
-		lib.PreloadTemplates("", true)
-		mustRescanTemplates = false
+		rescanLock.Lock()
+		if mustRescanTemplates {
+			mustRescanTemplates = false
+			lib.PreloadTemplates("", true)
+		}
+		rescanLock.Unlock()
 	}
 	rdat.BeginRequest = time.Now()
 	req.ParseForm()
 	rdat.TheDB, dberr = db.Connect()
 	rdat.Context = map[string]interface{}{}
+	rdat.StringContext = map[string]string{}
 	rdat.Out = resp
 	rdat.Req = req
-	rdat.Lang = lang.Languages[lib.SysConf.Settings.Defaults.Language]
+	rdat.Lang = lang.Languages[lib.SysConf.Settings.Settings.Language]
 	rdat.Context["L"] = rdat.Lang
-
+	rdat.Context["C"] = rdat.StringContext
+	
 	if req.FormValue("xml") != "" {
 		rdat.ResponseTypeXML = true
 	} else if req.FormValue("json") != "" {
@@ -66,6 +74,11 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
 		rdat.CurrentRoute = "index"
 	}
 
+	if req.Proto[0:5] == "HTTPS" {
+		rdat.BaseURL = "https://" + req.Host + lib.SysConf.Settings.Server.URLPrefix
+	} else {
+		rdat.BaseURL = "http://" + req.Host + lib.SysConf.Settings.Server.URLPrefix
+	}
 	rdat.Session, _ = store.Get(req, "appsession")
 
 	// we were not able to connect to our database, inform the user and bail out early
@@ -180,13 +193,16 @@ func main() {
 	go func() {
 		var currentMostRecent int64
 		for {
-			time.Sleep(lib.SysConf.Settings.Templates.Rescan * 1000 * time.Millisecond)
+			time.Sleep(lib.SysConf.Settings.Templates.MTimeCheckInterval * 1000 * time.Millisecond)
 			if !mustRescanTemplates {
 				currentMostRecent = lib.SysConf.TemplateMostRecent
-				lib.DoPreloadTemplates("")
+				lib.TemplateLock.Lock()
+				lib.DoPreloadTemplates("", true)
+				lib.TemplateLock.Unlock()
 				if lib.SysConf.TemplateMostRecent > currentMostRecent {
-					fmt.Println("Templates changed, must rescan")
+					rescanLock.Lock()
 					mustRescanTemplates = true
+					rescanLock.Unlock()
 				}
 			}
 		}
