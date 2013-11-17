@@ -7,7 +7,9 @@ DBUser = user
 DBpass = veryverysecret
 
 [Templates]
-Preload = true
+; how often (in seconds) should the app check for updated templates
+; default are 60 seconds, for a development system, you may lower this
+MTimeCheckInterval 60
 
 [Server]
 urlprefix = /app/

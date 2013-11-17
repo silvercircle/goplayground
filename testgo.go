@@ -11,12 +11,12 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"testgo/lib"
 	"testgo/lib/db"
 	"testgo/lib/lang"
 	"time"
-	"sync"
 )
 
 var store = sessions.NewCookieStore([]byte("adadfasdfadafsd"))
@@ -59,7 +59,7 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
 	rdat.Lang = lang.Languages[lib.SysConf.Settings.Settings.Language]
 	rdat.Context["L"] = rdat.Lang
 	rdat.Context["C"] = rdat.StringContext
-	
+
 	if req.FormValue("xml") != "" {
 		rdat.ResponseTypeXML = true
 	} else if req.FormValue("json") != "" {
@@ -128,7 +128,7 @@ func HandleRequest(resp http.ResponseWriter, req *http.Request) {
 	}
 	// and finally the footer (but again, not for xml
 	rdat.EndRequest = time.Now()
-	rdat.Context["loadtime"] = rdat.EndRequest.Sub(rdat.BeginRequest)
+	rdat.Context["loadtime"] = fmt.Sprintf("%.2f", float32(rdat.EndRequest.Sub(rdat.BeginRequest))/1000000.0) + "ms"
 	if !rdat.ResponseTypeXML && !rdat.ResponseTypeJSON {
 		lib.T.ExecuteTemplate(resp, rdat.FooterTemplate, rdat.Context)
 	}
